@@ -99,13 +99,9 @@ body{font-family:'Noto Sans SC',sans-serif;background:var(--bg);color:var(--t1);
 .ah{background:linear-gradient(135deg,var(--bd),var(--bb));padding:20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
 .ah h2{font-family:'ZCOOL KuaiLe',cursive;font-size:18px;color:var(--bc)}
 .ac{background:rgba(255,255,255,.15);border:none;color:var(--bc);width:36px;height:36px;border-radius:50%;font-size:18px;cursor:pointer}
-/* ★ NEW: 通知按钮 */
 .ah-btns{display:flex;gap:8px;align-items:center}
 .nb{background:rgba(255,255,255,.15);border:none;color:var(--bc);width:36px;height:36px;border-radius:50%;font-size:16px;cursor:pointer;position:relative;transition:all .2s}
 .nb.on{background:rgba(255,255,255,.3);color:#fff}
-.nb-pulse{position:absolute;top:-2px;right:-2px;width:10px;height:10px;background:var(--ac);border-radius:50%;border:2px solid var(--bd);animation:nbPulse 1.5s infinite}
-@keyframes nbPulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.4);opacity:.5}}
-/* ★ NEW: 管理员侧新订单提醒条 */
 .new-order-alert{background:linear-gradient(135deg,var(--ac),#D45A42);color:#fff;padding:12px 20px;font-size:13px;font-weight:700;display:none;align-items:center;justify-content:center;gap:8px;cursor:pointer;animation:slideDown .3s ease}
 .new-order-alert.on{display:flex}
 @keyframes slideDown{from{transform:translateY(-100%);opacity:0}to{transform:translateY(0);opacity:1}}
@@ -145,11 +141,10 @@ body{font-family:'Noto Sans SC',sans-serif;background:var(--bg);color:var(--t1);
 .fr{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .emo{display:flex;gap:8px;flex-wrap:wrap}
 .eo{width:42px;height:42px;border:2px solid transparent;border-radius:12px;background:rgba(254,240,225,.5);font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s}
-.eo:hover,.eo.on{border-color:var(--ac);background:var(--ag);transform:scale(1.1)}
-/* ★ NEW: 图标分类标签 */
 .ec-tabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px}
 .ec-tab{padding:4px 10px;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;background:rgba(254,240,225,.5);color:var(--t2);transition:all .2s;font-family:inherit}
 .ec-tab.on{background:var(--bb);color:var(--bc)}
+.eo:hover,.eo.on{border-color:var(--ac);background:var(--ag);transform:scale(1.1)}
 .sb{width:100%;padding:14px;background:linear-gradient(135deg,var(--bb),var(--bd));color:var(--bc);border:none;border-radius:18px;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;box-shadow:0 4px 20px rgba(139,105,20,.12);margin-top:8px}
 .sb:hover{transform:translateY(-2px)}
 .ami{display:flex;align-items:center;gap:14px;background:var(--sf);border-radius:18px;padding:14px;margin-bottom:10px;box-shadow:0 2px 8px rgba(139,105,20,.08)}
@@ -281,6 +276,23 @@ body{font-family:'Noto Sans SC',sans-serif;background:var(--bg);color:var(--t1);
 var SUPABASE_URL='https://mgygehqpdvhlidlcxkcp.supabase.co'
 var SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1neWdlaHFwZHZobGlkbGN4a2NwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1Njg3NzQsImV4cCI6MjA5NDE0NDc3NH0.CryPgSBZFrfEl8ZuxB7VPOiKx0UlIE00L6xRHV0KJ4k'
 
+// ★★★ 三选一：把你要用的那个填上 key，其他留空即可 ★★★
+
+// 方案A: Server酱（微信推送，免费每天5条）
+// 注册：https://sct.ftqq.com/  → 微信登录 → 复制 SendKey
+// 关注公众号"方糖"即可收消息
+var SERVERCHAN_KEY = ''
+
+// 方案B: Bark（iPhone 推送，完全免费无限）
+// App Store 搜"Bark"安装 → 打开复制设备key
+var BARK_KEY = ''
+
+// 方案C: 钉钉群机器人（完全免费无限）
+// 建一个钉钉群 → 群设置 → 智能群助手 → 添加自定义机器人 → 复制 Webhook URL
+var DINGTALK_WEBHOOK = 'https://oapi.dingtalk.com/robot/send?access_token=e16b0d3a7893c2e3181f12a8817128405d8da84901dedd215ab02c769e62968b'
+
+// ★★★★★★★★★★★★★★★★★★★★★★★★
+
 var db=null
 var sd=null,cart=JSON.parse(localStorage.getItem('ct')||'{}'),actCat=0,selE='🧋'
 var dy={s:1,ph:null,ba:null,tp:[]}
@@ -293,13 +305,12 @@ var PH=[{id:1,n:'日式抹茶',s:'清新淡雅',g:'linear-gradient(145deg,#C8E6C
 var BA=[{id:'b1',n:'鲜牛奶',i:'🥛',p:8,c:'#F5F5F5'},{id:'b2',n:'燕麦奶',i:'🌾',p:10,c:'#FFF3E0'},{id:'b3',n:'椰奶',i:'🥥',p:12,c:'#F1F8E9'},{id:'b4',n:'乌龙茶',i:'🍵',p:8,c:'#E8F5E9'},{id:'b5',n:'红茶',i:'🫖',p:7,c:'#FBE9E7'},{id:'b6',n:'气泡水',i:'🫧',p:6,c:'#E3F2FD'}]
 var TP=[{id:'t1',n:'珍珠',e:'⚫',p:3},{id:'t2',n:'椰果',e:'🥥',p:3},{id:'t3',n:'芋圆',e:'🟣',p:4},{id:'t4',n:'红豆',e:'🔴',p:3},{id:'t5',n:'奶盖',e:'🤍',p:5},{id:'t6',n:'冰淇淋',e:'🍦',p:6},{id:'t7',n:'布丁',e:'🍮',p:4},{id:'t8',n:'仙草',e:'🌿',p:3},{id:'t9',n:'芋泥',e:'🟤',p:5},{id:'t10',n:'芝士',e:'🧀',p:5},{id:'t11',n:'草莓',e:'🍓',p:5},{id:'t12',n:'芒果',e:'🥭',p:5},{id:'t13',n:'奥利奥',e:'🍪',p:3},{id:'t14',n:'蜂蜜',e:'🍯',p:3}]
 
-// ★ NEW: 分类图标列表
 var EMOJI_CATS=[
   {name:'饮品',emojis:['☕','🍵','🧋','🥤','🧃','🥛','🫖','🍶','🍺','🍻','🥂','🍷','🍹','🍸']},
   {name:'甜品',emojis:['🍰','🧁','🍩','🍪','🎂','🥮','🧇','🍦','🍫','🍮','🍭','🍬','🍯']},
   {name:'水果',emojis:['🍎','🍐','🍊','🍋','🍌','🍉','🍇','🍓','🫐','🍈','🍒','🍑','🥭','🍍','🥥','🥝','🍅','🫒']},
   {name:'烧烤',emojis:['🍖','🍗','🥩','🥓','🍢','🍡','🫕','🌽','🥔']},
-  {name:'汤煮',emojis:['🍲','🥘','🍜','🍝','🍛','🍚','🍙','🍘','🍣','🍱','🥗','🫕']},
+  {name:'汤煮',emojis:['🍲','🥘','🍜','🍝','🍛','🍚','🍙','🍘','🍣','🍱','🥗']},
   {name:'小吃',emojis:['🍕','🍔','🌭','🌮','🌯','🥙','🥪','🫔','🧆','🥯','🥐','🍞','🥖','🥨','🍠','🥟','🦪']},
   {name:'海鲜',emojis:['🦐','🦑','🦀','🦞','🐟','🐠','🦪']},
   {name:'蔬菜',emojis:['🥦','🥕','🌶️','🫑','🥬','🥒','🧄','🧅','🥜','🌱']},
@@ -324,7 +335,7 @@ function showDebug(msg,type){
 }
 function sbar(type,msg){var el=document.getElementById('sbar'),t=document.getElementById('sbarT');el.className='status-bar '+type;t.textContent=msg;if(type==='ok')setTimeout(function(){el.className='status-bar'},2500)}
 
-// ★ NEW: 通知系统 =====
+// ===== 通知系统 =====
 function getAudioCtx(){
   if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)()
   if(audioCtx.state==='suspended')audioCtx.resume()
@@ -347,7 +358,7 @@ function playNotifSound(){
 function sendBrowserNotif(count){
   if(!('Notification' in window))return
   if(Notification.permission==='granted'){
-    try{new Notification('🧸 新订单来啦！',{body:'收到 '+count+' 个新订单，快去看看~',tag:'new-order',icon:'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧸</text></svg>'})}catch(e){}
+    try{new Notification('🧸 新订单来啦！',{body:'收到 '+count+' 个新订单，快去看看~',tag:'new-order'})}catch(e){}
   }
 }
 function reqNotifPerm(){
@@ -368,15 +379,53 @@ function updNotifBtn(){
   btn.textContent=notifOn?'🔔':'🔕'
   btn.classList.toggle('on',notifOn)
 }
-function notifyNewOrder(count){
+
+// ★ 三选一推送：自动检测填了哪个就用哪个
+function formatOrderText(order){
+  var lines=[]
+  order.items.forEach(function(e){
+    var name=e[2]||'未知商品',emoji=e[3]||'?',price=e[4]||0,qty=e[1]
+    lines.push(emoji+' '+name+' × '+qty+'  ¥'+(price*qty).toFixed(1))
+  })
+  return '🧾 #'+order.id+'  🕐'+order.time+'\n'+lines.join('\n')+'\n💰 合计 ¥'+Number(order.total).toFixed(1)
+}
+
+function sendPush(title,content){
+  // Server酱
+  if(SERVERCHAN_KEY){
+    fetch('https://sctapi.ftqq.com/'+SERVERCHAN_KEY+'.send',{
+      method:'POST',
+      headers:{'Content-Type':'application/x-www-form-urlencoded'},
+      body:'title='+encodeURIComponent(title)+'&desp='+encodeURIComponent(content)
+    }).catch(function(){})
+  }
+  // Bark（iPhone）
+  if(BARK_KEY){
+    var barkUrl=BARK_KEY.indexOf('http')===0?BARK_KEY:'https://api.day.app/'+BARK_KEY
+    fetch(barkUrl+'/'+encodeURIComponent(title)+'/'+encodeURIComponent(content)).catch(function(){})
+  }
+  // 钉钉机器人
+  if(DINGTALK_WEBHOOK){
+    fetch(DINGTALK_WEBHOOK,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({msgtype:'text',text:{content:title+'\n'+content}})
+    }).catch(function(){})
+  }
+}
+
+function notifyNewOrder(newOrders){
   if(!notifOn)return
   playNotifSound()
-  sendBrowserNotif(count)
-  try{if(navigator.vibrate&&notifOn)navigator.vibrate([200,100,200])}catch(e){}
+  sendBrowserNotif(newOrders.length)
+  try{if(navigator.vibrate)navigator.vibrate([200,100,200])}catch(e){}
   var alert=document.getElementById('newOrdAlert')
   if(alert){alert.classList.add('on');setTimeout(function(){alert.classList.remove('on')},8000)}
+  // 推送到手机
+  newOrders.forEach(function(o){
+    sendPush('新订单 #'+o.id,formatOrderText(o))
+  })
 }
-// ★ NEW END =====
 
 // ===== Supabase =====
 async function fetchLatest(){
@@ -394,15 +443,14 @@ async function updateData(fn){
   }catch(e){console.error('updateData error:',e);sbar('error','⚠ 同步失败');return false}
 }
 
-// ★ CHANGED: poll 检测新订单并触发通知
 async function poll(){
   try{
     var d=await fetchLatest()
     if(JSON.stringify(d)!==JSON.stringify(sd)){
-      var oldIds={};sd.orders.forEach(function(o){oldIds[o.id]=true})
-      var newOrders=d.orders.filter(function(o){return !oldIds[o.id]})
+      var oldCnt=sd.orders.length
+      var newOrders=d.orders.length>oldCnt?d.orders.slice(oldCnt):[]
       sd=d;renderCurrentPage()
-      if(newOrders.length>0)notifyNewOrder(newOrders.length)
+      if(newOrders.length>0)notifyNewOrder(newOrders)
     }
   }catch(e){}
 }
@@ -447,12 +495,20 @@ function renderCart(){
 }
 
 // ===== ORDERS =====
+function renderItemLine(e,menu){
+  var id=e[0],qty=e[1],name=e[2],emoji=e[3],price=e[4]
+  if(name)return {html:'<div class="oil"><span>'+emoji+' '+name+' × '+qty+'</span><span>¥'+(price*qty).toFixed(1)+'</span></div>',ok:true}
+  var it=menu.find(function(i){return String(i.id)===String(id)})
+  if(it)return {html:'<div class="oil"><span>'+it.emoji+' '+it.name+' × '+qty+'</span><span>¥'+(it.price*qty).toFixed(1)+'</span></div>',ok:true}
+  return {html:'<div class="oil"><span style="color:var(--t3)">[已删除的商品] × '+qty+'</span><span></span></div>',ok:false}
+}
+
 function renderOrders(){
   var box=document.getElementById('ob')
   if(!sd.orders.length){box.innerHTML='<div class="empty"><div class="ei">📋</div><div class="et">还没有订单哦~</div><button class="gb" onclick="go(\'pH\')">去点单</button></div>';return}
   var menu=getFullMenu()
   box.innerHTML='<div class="ol">'+sd.orders.slice().reverse().map(function(o){
-    var ih=o.items.map(function(e){var id=e[0],qty=e[1],it=menu.find(function(i){return String(i.id)===String(id)});return it?'<div class="oil"><span>'+it.emoji+' '+it.name+' × '+qty+'</span><span>¥'+(it.price*qty).toFixed(1)+'</span></div>':'<div class="oil"><span style="color:var(--t3)">[已下架商品] × '+qty+'</span><span></span></div>'}).join('')
+    var ih=o.items.map(function(e){return renderItemLine(e,menu).html}).join('')
     return '<div class="oc"><div class="ot"><span class="oid">订单 #'+o.id+'</span><span class="os '+o.status+'" style="border:none">'+(o.status==='pending'?'⏳ 制作中':'✅ 已完成')+'</span></div><div>'+ih+'</div><div class="obot"><span class="tm">'+o.time+'</span><span class="tt"><span class="y">¥</span>'+Number(o.total).toFixed(1)+'</span></div><div class="oo-bot"><button class="od-del" onclick="delOrd('+o.id+')">🗑 删除订单</button></div></div>'
   }).join('')+'</div>'
 }
@@ -476,7 +532,7 @@ function renderAdminOrders(){
   var menu=getFullMenu()
   list.innerHTML=sd.orders.slice().reverse().map(function(o){
     var isNew=o.status==='pending'&&o.ts&&(Date.now()-o.ts<120000)
-    var ih=o.items.map(function(e){var id=e[0],qty=e[1],it=menu.find(function(i){return String(i.id)===String(id)});return it?'<div class="aoc-il"><span>'+it.emoji+' '+it.name+'</span><span>×'+qty+' ¥'+(it.price*qty).toFixed(1)+'</span></div>':'<div class="aoc-il"><span style="color:var(--t3)">[已下架]</span><span>×'+qty+'</span></div>'}).join('')
+    var ih=o.items.map(function(e){return renderItemLine(e,menu).html}).join('')
     var cnt=o.items.reduce(function(s,e){return s+e[1]},0)
     return '<div class="aoc '+(isNew?'is-new':'')+'"><div class="aoc-t"><div><b>🧾 订单 #'+o.id+'</b><small>🕐 '+o.time+'</small></div><button class="os '+o.status+'" onclick="togOrd('+o.id+')" style="border:none;cursor:pointer">'+(o.status==='pending'?'⏳ 完成':'✅ 已完成')+'</button></div><div class="aoc-i">'+ih+'</div><div class="aoc-b"><span class="cn">共 '+cnt+' 件</span><span class="tt"><span class="y">¥</span>'+Number(o.total).toFixed(1)+'</span></div></div>'
   }).join('')
@@ -502,9 +558,14 @@ function updBadge(){var b=document.getElementById('bg2'),n=Object.values(cart).r
 async function placeOrd(){
   var entries=Object.entries(cart).filter(function(e){return e[1]>0})
   if(!entries.length)return
-  var total=0;var menu=getFullMenu();entries.forEach(function(e){var id=e[0],qty=e[1],it=menu.find(function(i){return String(i.id)===String(id)});if(it)total+=it.price*qty})
+  var total=0;var menu=getFullMenu()
+  var enriched=entries.map(function(e){
+    var id=e[0],qty=e[1],it=menu.find(function(i){return String(i.id)===String(id)})
+    if(it){total+=it.price*qty;return [id,qty,it.name,it.emoji,it.price]}
+    return [id,qty,'未知商品','?',0]
+  })
   var now=new Date();var time=(now.getMonth()+1)+'/'+now.getDate()+' '+now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0')
-  var ok=await updateData(function(d){d.orders.push({id:d.nid.o++,items:entries,total:total,status:'pending',time:time,ts:Date.now()})})
+  var ok=await updateData(function(d){d.orders.push({id:d.nid.o++,items:enriched,total:total,status:'pending',time:time,ts:Date.now()})})
   if(ok){cart={};saveCart();updBadge();document.getElementById('mOk').classList.add('on');renderOrders()}
   else toast('下单失败，请重试')
 }
@@ -551,8 +612,6 @@ function cD(){document.getElementById('mD').classList.remove('on');go('pH')}
 // ===== ADMIN =====
 function openAdmin(){document.getElementById('ap').classList.add('on');document.getElementById('lv').style.display='block';document.getElementById('dv').style.display='none';document.getElementById('pw').value='';setTimeout(function(){document.getElementById('pw').focus()},300)}
 function cA(){document.getElementById('ap').classList.remove('on')}
-
-// ★ CHANGED: 登录时初始化通知
 function dL(){
   if(document.getElementById('pw').value==='888888'){
     document.getElementById('lv').style.display='none';document.getElementById('dv').style.display='block'
@@ -562,7 +621,6 @@ function dL(){
     toast('欢迎回来！')
   }else{toast('密码错误');document.getElementById('pw').value=''}
 }
-
 function sT(t){
   document.querySelectorAll('.atb').forEach(function(x){x.classList.toggle('on',x.dataset.t===t)})
   document.querySelectorAll('.apn').forEach(function(x){x.classList.toggle('on',x.id===t)})
@@ -570,7 +628,6 @@ function sT(t){
   if(t==='tL')renderAdminMenu();if(t==='tCa')renderCatL()
 }
 
-// ★ CHANGED: 带分类标签的图标选择器
 function renderEmo(){
   var html='<div class="ec-tabs">'
   EMOJI_CATS.forEach(function(cat,i){
