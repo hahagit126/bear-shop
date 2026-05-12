@@ -6,7 +6,7 @@
 <title>一二布布 · 小熊点单</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
-<script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
 :root{--bg:#FFF8F0;--sf:#FFF;--bb:#8B6914;--bd:#5C4510;--bc:#F5DEB3;--ac:#E8705A;--as:#F0947F;--ag:#FFE0D8;--pk:#F2A7B3;--gn:#7CB98B;--gs:#D4EDDA;--t1:#3D2B1F;--t2:#7A6555;--t3:#B8A595}
 *{margin:0;padding:0;box-sizing:border-box}
@@ -487,7 +487,7 @@ function toast(m){var t=document.getElementById('ts');t.textContent=m;t.classLis
 
   // 检查 1: Supabase 库是否加载
   if (typeof window.supabase === 'undefined') {
-    showDebug('❌ 步骤1失败: Supabase JS库没有加载成功<br><br>请检查你的网络能否访问 unpkg.com', 'error')
+    showDebug('❌ 步骤1失败: Supabase JS库没有加载成功<br><br>请检查你的网络能否访问 cdn.jsdelivr.net', 'error')
     return
   }
   log.push('✓ 步骤1: Supabase库已加载')
