@@ -91,6 +91,11 @@ body{font-family:'Noto Sans SC',sans-serif;background:var(--bg);color:var(--t1);
 .oil{display:flex;justify-content:space-between;font-size:13px;padding:3px 0;color:var(--t2)}
 .obot{display:flex;justify-content:space-between;align-items:center}
 .obot .tm{font-size:11px;color:var(--t3)}.obot .tt{font-size:17px;font-weight:900;color:var(--ac)}.obot .y{font-size:11px}
+/* ★★★ 新增：用户端订单删除按钮 ★★★ */
+.oo-bot{display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:10px;border-top:1px dashed rgba(139,105,20,.08)}
+.od-del{background:none;border:1.5px solid rgba(232,112,90,.25);color:var(--ac);border-radius:10px;padding:5px 14px;font-size:11px;cursor:pointer;font-weight:600;transition:all .2s;font-family:inherit}
+.od-del:hover{background:var(--ag);border-color:var(--ac)}
+/* ★★★ 新增结束 ★★★ */
 .ap{display:none;position:fixed;top:0;left:50%;transform:translateX(-50%);width:430px;max-width:100%;height:100%;background:var(--bg);z-index:200;overflow-y:auto}
 .ap.on{display:block;animation:fi .3s ease}
 .ah{background:linear-gradient(135deg,var(--bd),var(--bb));padding:20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
@@ -267,7 +272,7 @@ var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSI
 
 var db = null
 var sd = null, cart = JSON.parse(localStorage.getItem('ct')||'{}'), actCat = 0, selE = '🧋'
-var dy = {s:1, ph:null, ba:null, tp:[]}
+var dy = {s:1,ph:null,ba:null,tp:[]}
 
 var CG={1:'linear-gradient(135deg,#E8F5E9,#A5D6A7)',2:'linear-gradient(135deg,#FCE4EC,#F48FB1)',3:'linear-gradient(135deg,#FFF3E0,#FFCC80)',4:'linear-gradient(135deg,#E3F2FD,#90CAF9)',0:'linear-gradient(135deg,#FFF3E0,#FFE0B2)'}
 var PH=[{id:1,n:'日式抹茶',s:'清新淡雅',g:'linear-gradient(145deg,#C8E6C9,#81C784)',i:'🍵'},{id:2,n:'焦糖拿铁',s:'温暖慵懒',g:'linear-gradient(145deg,#D7CCC8,#A1887F)',i:'☕'},{id:3,n:'草莓甜心',s:'少女甜美',g:'linear-gradient(145deg,#FCE4EC,#F48FB1)',i:'🍓'},{id:4,n:'巧克力梦',s:'浓郁醇厚',g:'linear-gradient(145deg,#6D4C41,#D7CCC8)',i:'🍫'},{id:5,n:'蜜桃乌龙',s:'清新甜蜜',g:'linear-gradient(145deg,#FFE0B2,#FFB74D)',i:'🍑'},{id:6,n:'蓝莓星空',s:'梦幻浪漫',g:'linear-gradient(145deg,#E1BEE7,#BA68C8)',i:'🫐'},{id:7,n:'柠檬阳光',s:'活力清爽',g:'linear-gradient(145deg,#FFF9C4,#FFEE58)',i:'🍋'},{id:8,n:'樱花物语',s:'浪漫春日',g:'linear-gradient(145deg,#F8BBD0,#E1BEE7)',i:'🌸'}]
@@ -279,7 +284,16 @@ function getDefault(){
   return {categories:[{id:1,name:'特调饮品',emoji:'🧋',sort_order:1},{id:2,name:'甜蜜糕点',emoji:'🍰',sort_order:2},{id:3,name:'轻食简餐',emoji:'🍱',sort_order:3},{id:4,name:'季节限定',emoji:'🌸',sort_order:4}],menu:[{id:1,name:'一二奶茶',desc:'布布特调的经典奶茶',price:12,emoji:'🧋',cat:1,tag:'hot'},{id:2,name:'布布拿铁',desc:'香浓丝滑的焦糖拿铁',price:22,emoji:'☕',cat:1,tag:''},{id:3,name:'小熊蜂蜜水',desc:'温润甜蜜的蜂蜜柠檬',price:15,emoji:'🍯',cat:1,tag:'sweet'},{id:4,name:'草莓慕斯',desc:'一二最爱的草莓甜品',price:28,emoji:'🍰',cat:2,tag:'hot'},{id:5,name:'巧克力曲奇',desc:'酥脆浓郁的巧克力饼干',price:16,emoji:'🍪',cat:2,tag:''},{id:6,name:'抹茶毛巾卷',desc:'清新抹茶味蛋糕卷',price:25,emoji:'🧁',cat:2,tag:'new'},{id:7,name:'熊掌三明治',desc:'超可爱的熊掌造型',price:32,emoji:'🥐',cat:3,tag:'hot'},{id:8,name:'布布便当',desc:'丰盛的每日营养便当',price:38,emoji:'🍱',cat:3,tag:''},{id:9,name:'樱花气泡水',desc:'限定春日浪漫饮品',price:20,emoji:'🌸',cat:4,tag:'new'},{id:10,name:'蜜桃乌龙',desc:'清甜蜜桃遇上醇香乌龙',price:19,emoji:'🍑',cat:4,tag:'sweet'}],orders:[],nid:{m:11,o:2,c:5}}
 }
 
-// 显示调试信息到页面
+// ★★★ 新增：获取完整菜单（合并 Supabase 数据 + 本地 DIY 商品）★★★
+function getFullMenu(){
+  var diy = JSON.parse(localStorage.getItem('diy_items') || '[]')
+  var existingIds = {}
+  sd.menu.forEach(function(i){ existingIds[i.id] = true })
+  var extra = diy.filter(function(d){ return !existingIds[d.id] })
+  return sd.menu.concat(extra)
+}
+// ★★★ 新增结束 ★★★
+
 function showDebug(msg, type) {
   var mg = document.getElementById('mg')
   var color = type === 'ok' ? '#155724' : type === 'warn' ? '#856404' : '#721C24'
@@ -346,14 +360,15 @@ function renderMenu(){
   }).join('')
 }
 
-// ===== CART =====
+// ===== CART（★ 修改：使用 getFullMenu）=====
 function renderCart(){
   var box=document.getElementById('cb'),sum=document.getElementById('smb')
   var entries=Object.entries(cart).filter(function(e){return e[1]>0})
   if(!entries.length){sum.classList.remove('on');box.innerHTML='<div class="empty"><div class="ei">🧸</div><div class="et">购物车空空的~<br>快去挑选吧！</div><button class="gb" onclick="go(\'pH\')">去逛逛</button></div>';return}
   var total=0
+  var menu=getFullMenu()
   box.innerHTML='<div class="cl">'+entries.map(function(e){
-    var id=e[0],qty=e[1],it=sd.menu.find(function(i){return i.id==id});if(!it)return ''
+    var id=e[0],qty=e[1],it=menu.find(function(i){return String(i.id)===String(id)});if(!it)return ''
     total+=it.price*qty
     return '<div class="xi"><div class="xi-im" style="background:'+(CG[it.cat]||CG[0])+'">'+it.emoji+'</div><div class="xi-n"><div class="nm">'+it.name+'</div><div class="ds">'+(it.desc||'')+'</div><div class="pr"><span class="y">¥</span>'+Number(it.price).toFixed(1)+'</div></div><div class="qt"><button class="qb" onclick="upCart(\''+id+'\',-1)">−</button><span class="qn">'+qty+'</span><button class="qb" onclick="upCart(\''+id+'\',1)">+</button></div></div>'
   }).join('')+'</div>'
@@ -361,17 +376,28 @@ function renderCart(){
   sum.classList.add('on')
 }
 
-// ===== ORDERS =====
+// ===== ORDERS（★ 修改：使用 getFullMenu + 新增删除按钮）=====
 function renderOrders(){
   var box=document.getElementById('ob')
   if(!sd.orders.length){box.innerHTML='<div class="empty"><div class="ei">📋</div><div class="et">还没有订单哦~</div><button class="gb" onclick="go(\'pH\')">去点单</button></div>';return}
+  var menu=getFullMenu()
   box.innerHTML='<div class="ol">'+sd.orders.slice().reverse().map(function(o){
-    var ih=o.items.map(function(e){var id=e[0],qty=e[1],it=sd.menu.find(function(i){return i.id==id});return it?'<div class="oil"><span>'+it.emoji+' '+it.name+' × '+qty+'</span><span>¥'+(it.price*qty).toFixed(1)+'</span></div>':''}).join('')
-    return '<div class="oc"><div class="ot"><span class="oid">订单 #'+o.id+'</span><span class="os '+o.status+'" style="border:none">'+(o.status==='pending'?'⏳ 制作中':'✅ 已完成')+'</span></div><div>'+ih+'</div><div class="obot"><span class="tm">'+o.time+'</span><span class="tt"><span class="y">¥</span>'+Number(o.total).toFixed(1)+'</span></div></div>'
+    var ih=o.items.map(function(e){var id=e[0],qty=e[1],it=menu.find(function(i){return String(i.id)===String(id)});return it?'<div class="oil"><span>'+it.emoji+' '+it.name+' × '+qty+'</span><span>¥'+(it.price*qty).toFixed(1)+'</span></div>':'<div class="oil"><span style="color:var(--t3)">[已下架商品] × '+qty+'</span><span></span></div>'}).join('')
+    return '<div class="oc"><div class="ot"><span class="oid">订单 #'+o.id+'</span><span class="os '+o.status+'" style="border:none">'+(o.status==='pending'?'⏳ 制作中':'✅ 已完成')+'</span></div><div>'+ih+'</div><div class="obot"><span class="tm">'+o.time+'</span><span class="tt"><span class="y">¥</span>'+Number(o.total).toFixed(1)+'</span></div><div class="oo-bot"><span></span><button class="od-del" onclick="delOrd('+o.id+')">🗑 删除订单</button></div></div>'
   }).join('')+'</div>'
 }
 
-// ===== ADMIN ORDERS =====
+// ★★★ 新增：用户端删除订单 ★★★
+async function delOrd(id){
+  if(!confirm('确定删除这个订单吗？'))return
+  await updateData(function(d){d.orders=d.orders.filter(function(o){return o.id!==id})})
+  renderOrders()
+  updBadge()
+  toast('订单已删除')
+}
+// ★★★ 新增结束 ★★★
+
+// ===== ADMIN ORDERS（★ 修改：使用 getFullMenu）=====
 function renderAdminOrders(){
   var pend=sd.orders.filter(function(o){return o.status==='pending'}).length
   var done=sd.orders.filter(function(o){return o.status==='done'}).length
@@ -381,9 +407,10 @@ function renderAdminOrders(){
   document.getElementById('sts').innerHTML='<div class="stat"><b>'+sd.orders.length+'</b><small>总订单</small></div><div class="stat"><b style="color:#856404">'+pend+'</b><small>待处理</small></div><div class="stat"><b style="color:var(--gn)">'+done+'</b><small>已完成</small></div><div class="stat"><b>¥'+rev.toFixed(0)+'</b><small>总收入</small></div>'
   var list=document.getElementById('aol')
   if(!sd.orders.length){list.innerHTML='<div style="text-align:center;padding:40px;color:var(--t3)">📋 暂无订单~</div>';return}
+  var menu=getFullMenu()
   list.innerHTML=sd.orders.slice().reverse().map(function(o){
     var isNew=o.status==='pending'&&o.ts&&(Date.now()-o.ts<120000)
-    var ih=o.items.map(function(e){var id=e[0],qty=e[1],it=sd.menu.find(function(i){return i.id==id});return it?'<div class="aoc-il"><span>'+it.emoji+' '+it.name+'</span><span>×'+qty+' ¥'+(it.price*qty).toFixed(1)+'</span></div>':''}).join('')
+    var ih=o.items.map(function(e){var id=e[0],qty=e[1],it=menu.find(function(i){return String(i.id)===String(id)});return it?'<div class="aoc-il"><span>'+it.emoji+' '+it.name+'</span><span>×'+qty+' ¥'+(it.price*qty).toFixed(1)+'</span></div>':'<div class="aoc-il"><span style="color:var(--t3)">[已下架]</span><span>×'+qty+'</span></div>'}).join('')
     var cnt=o.items.reduce(function(s,e){return s+e[1]},0)
     return '<div class="aoc '+(isNew?'is-new':'')+'"><div class="aoc-t"><div><b>🧾 订单 #'+o.id+'</b><small>🕐 '+o.time+'</small></div><button class="os '+o.status+'" onclick="togOrd('+o.id+')" style="border:none;cursor:pointer">'+(o.status==='pending'?'⏳ 完成':'✅ 已完成')+'</button></div><div class="aoc-i">'+ih+'</div><div class="aoc-b"><span class="cn">共 '+cnt+' 件</span><span class="tt"><span class="y">¥</span>'+Number(o.total).toFixed(1)+'</span></div></div>'
   }).join('')
@@ -400,16 +427,17 @@ function go(p){
   if(p==='pH'){if(sd){renderCats();renderMenu()}}
 }
 function filCat(id){actCat=id;renderCats();renderMenu()}
-function addCart(id){cart[id]=(cart[id]||0)+1;saveCart();updBadge();var it=sd.menu.find(function(i){return i.id==id});toast('已添加 '+(it?it.emoji+' '+it.name:''))}
+function addCart(id){cart[id]=(cart[id]||0)+1;saveCart();updBadge();var menu=getFullMenu();var it=menu.find(function(i){return String(i.id)===String(id)});toast('已添加 '+(it?it.emoji+' '+it.name:''))}
 function upCart(id,d){var v=(cart[id]||0)+d;if(v<=0)delete cart[id];else cart[id]=v;saveCart();updBadge();renderCart()}
 function clrCart(){cart={};saveCart();updBadge();renderCart()}
 function saveCart(){localStorage.setItem('ct',JSON.stringify(cart))}
 function updBadge(){var b=document.getElementById('bg2'),n=Object.values(cart).reduce(function(a,b){return a+b},0);if(n>0){b.textContent=n;b.style.display='flex'}else b.style.display='none'}
 
+// ★★★ 修改：placeOrd 使用 getFullMenu ★★★
 async function placeOrd(){
   var entries=Object.entries(cart).filter(function(e){return e[1]>0})
   if(!entries.length)return
-  var total=0;entries.forEach(function(e){var id=e[0],qty=e[1],it=sd.menu.find(function(i){return i.id==id});if(it)total+=it.price*qty})
+  var total=0;var menu=getFullMenu();entries.forEach(function(e){var id=e[0],qty=e[1],it=menu.find(function(i){return String(i.id)===String(id)});if(it)total+=it.price*qty})
   var now=new Date();var time=(now.getMonth()+1)+'/'+now.getDate()+' '+now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0')
   var ok=await updateData(function(d){d.orders.push({id:d.nid.o++,items:entries,total:total,status:'pending',time:time,ts:Date.now()})})
   if(ok){cart={};saveCart();updBadge();document.getElementById('mOk').classList.add('on');renderOrders()}
@@ -422,7 +450,7 @@ async function togOrd(id){
   renderAdminOrders();renderOrders()
 }
 
-// ===== DIY =====
+// ===== DIY（★ 修改：保存到 localStorage）=====
 function renderDiy(){
   document.getElementById('si').innerHTML=[1,2,3,4].map(function(s,i){return '<div class="sd '+(dy.s===s?'on':dy.s>s?'ok':'')+'">'+s+'</div>'+(i<3?'<div class="sl '+(dy.s>s?'ok':'')+'"></div>':'')}).join('')
   document.querySelectorAll('.ds').forEach(function(el){el.classList.toggle('on',+el.dataset.s===dy.s)})
@@ -441,6 +469,8 @@ function renderDp2(){
 }
 function dyN(){if(dy.s===1&&!dy.ph)return toast('先选一张灵感图~');if(dy.s===2&&!dy.ba)return toast('请选一个基底~');if(dy.s<4){dy.s++;renderDiy()}}
 function dyP(){if(dy.s>1){dy.s--;renderDiy()}}
+
+// ★★★ 修改：addDiy 同步保存到 localStorage ★★★
 function addDiy(){
   var ba=BA.find(function(b){return b.id===dy.ba}),ph=PH.find(function(p){return p.id===dy.ph})
   var tops=dy.tp.map(function(tid){return TP.find(function(t){return t.id===tid})}).filter(Boolean)
@@ -448,10 +478,18 @@ function addDiy(){
   var name=document.getElementById('dni').value.trim()||ba.n+'特调'
   var price=ba.p+tops.reduce(function(s,t){return s+t.p},0)
   var did='diy_'+Date.now()
-  sd.menu.push({id:did,name:'🎨'+name,desc:ba.n+(tops.length?' + '+tops.map(function(t){return t.n}).join('、'):''),price:price,emoji:ph?ph.i:ba.i,cat:0,tag:'new',isDiy:true})
+  var item={id:did,name:'🎨'+name,desc:ba.n+(tops.length?' + '+tops.map(function(t){return t.n}).join('、'):''),price:price,emoji:ph?ph.i:ba.i,cat:0,tag:'new',isDiy:true}
+  // 保存到本地 sd（当前会话）
+  sd.menu.push(item)
+  // ★ 同步保存到 localStorage，这样 poll 覆盖 sd 后也不会丢失
+  var diyList=JSON.parse(localStorage.getItem('diy_items')||'[]')
+  diyList.push(item)
+  localStorage.setItem('diy_items',JSON.stringify(diyList))
   cart[did]=(cart[did]||0)+1;saveCart();updBadge()
   document.getElementById('mD').classList.add('on')
 }
+// ★★★ 修改结束 ★★★
+
 function cD(){document.getElementById('mD').classList.remove('on');go('pH')}
 
 // ===== ADMIN =====
@@ -481,18 +519,16 @@ async function dlCa(id){var c=sd.categories.find(function(x){return x.id===id});
 
 function toast(m){var t=document.getElementById('ts');t.textContent=m;t.classList.add('on');setTimeout(function(){t.classList.remove('on')},1500)}
 
-// ===== INIT（带调试信息） =====
+// ===== INIT =====
 ;(async function(){
   var log = []
 
-  // 检查 1: Supabase 库是否加载
   if (typeof window.supabase === 'undefined') {
     showDebug('❌ 步骤1失败: Supabase JS库没有加载成功<br><br>请检查你的网络能否访问 cdn.jsdelivr.net', 'error')
     return
   }
   log.push('✓ 步骤1: Supabase库已加载')
 
-  // 检查 2: createClient
   try {
     db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
     log.push('✓ 步骤2: 客户端已创建 URL=' + SUPABASE_URL)
@@ -501,7 +537,6 @@ function toast(m){var t=document.getElementById('ts');t.textContent=m;t.classLis
     return
   }
 
-  // 检查 3: 查询数据库
   try {
     var r = await db.from('app_data').select('content').eq('id','main').single()
     if (r.error) {
@@ -515,14 +550,12 @@ function toast(m){var t=document.getElementById('ts');t.textContent=m;t.classLis
     return
   }
 
-  // 检查 4: 数据结构验证
   if (!sd || !sd.menu || !sd.categories || !sd.orders) {
     showDebug('❌ 步骤4失败: 数据结构不对<br><br>返回的数据: ' + JSON.stringify(sd).substring(0, 200), 'error')
     return
   }
   log.push('✓ 步骤4: 数据结构正确, 共' + sd.menu.length + '道菜')
 
-  // 全部成功
   showDebug(log.join('<br>') + '<br><br>🎉 一切正常！正在渲染菜单...', 'ok')
   sbar('ok', '✓ 数据已加载')
 
