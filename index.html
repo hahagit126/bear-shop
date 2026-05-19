@@ -276,29 +276,14 @@ body{font-family:'Noto Sans SC',sans-serif;background:var(--bg);color:var(--t1);
 var SUPABASE_URL='https://mgygehqpdvhlidlcxkcp.supabase.co'
 var SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1neWdlaHFwZHZobGlkbGN4a2NwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1Njg3NzQsImV4cCI6MjA5NDE0NDc3NH0.CryPgSBZFrfEl8ZuxB7VPOiKx0UlIE00L6xRHV0KJ4k'
 
-// ★★★ 三选一：把你要用的那个填上 key，其他留空即可 ★★★
-
-// 方案A: Server酱（微信推送，免费每天5条）
-// 注册：https://sct.ftqq.com/  → 微信登录 → 复制 SendKey
-// 关注公众号"方糖"即可收消息
-var SERVERCHAN_KEY = ''
-
-// 方案B: Bark（iPhone 推送，完全免费无限）
-// App Store 搜"Bark"安装 → 打开复制设备key
-var BARK_KEY = ''
-
-// 方案C: 钉钉群机器人（完全免费无限）
-// 建一个钉钉群 → 群设置 → 智能群助手 → 添加自定义机器人 → 复制 Webhook URL
-var DINGTALK_WEBHOOK = 'https://oapi.dingtalk.com/robot/send?access_token=98770c077ec73b6db9973aa2810e0342e49c8c3df5dfc9197caea9dc6316eba8'
-
-// ★★★★★★★★★★★★★★★★★★★★★★★★
-
 var db=null
 var sd=null,cart=JSON.parse(localStorage.getItem('ct')||'{}'),actCat=0,selE='🧋'
 var dy={s:1,ph:null,ba:null,tp:[]}
 var audioCtx=null
 var notifOn=localStorage.getItem('notif_on')!=='false'
 var emoCatIdx=0
+var lastNotifiedOrderId=0
+var realtimeChannel=null
 
 var CG={1:'linear-gradient(135deg,#E8F5E9,#A5D6A7)',2:'linear-gradient(135deg,#FCE4EC,#F48FB1)',3:'linear-gradient(135deg,#FFF3E0,#FFCC80)',4:'linear-gradient(135deg,#E3F2FD,#90CAF9)',0:'linear-gradient(135deg,#FFF3E0,#FFE0B2)'}
 var PH=[{id:1,n:'日式抹茶',s:'清新淡雅',g:'linear-gradient(145deg,#C8E6C9,#81C784)',i:'🍵'},{id:2,n:'焦糖拿铁',s:'温暖慵懒',g:'linear-gradient(145deg,#D7CCC8,#A1887F)',i:'☕'},{id:3,n:'草莓甜心',s:'少女甜美',g:'linear-gradient(145deg,#FCE4EC,#F48FB1)',i:'🍓'},{id:4,n:'巧克力梦',s:'浓郁醇厚',g:'linear-gradient(145deg,#6D4C41,#D7CCC8)',i:'🍫'},{id:5,n:'蜜桃乌龙',s:'清新甜蜜',g:'linear-gradient(145deg,#FFE0B2,#FFB74D)',i:'🍑'},{id:6,n:'蓝莓星空',s:'梦幻浪漫',g:'linear-gradient(145deg,#E1BEE7,#BA68C8)',i:'🫐'},{id:7,n:'柠檬阳光',s:'活力清爽',g:'linear-gradient(145deg,#FFF9C4,#FFEE58)',i:'🍋'},{id:8,n:'樱花物语',s:'浪漫春日',g:'linear-gradient(145deg,#F8BBD0,#E1BEE7)',i:'🌸'}]
@@ -380,51 +365,17 @@ function updNotifBtn(){
   btn.classList.toggle('on',notifOn)
 }
 
-// ★ 三选一推送：自动检测填了哪个就用哪个
-function formatOrderText(order){
-  var lines=[]
-  order.items.forEach(function(e){
-    var name=e[2]||'未知商品',emoji=e[3]||'?',price=e[4]||0,qty=e[1]
-    lines.push(emoji+' '+name+' × '+qty+'  ¥'+(price*qty).toFixed(1))
-  })
-  return '🧾 #'+order.id+'  🕐'+order.time+'\n'+lines.join('\n')+'\n💰 合计 ¥'+Number(order.total).toFixed(1)
-}
-
-function sendPush(title,content){
-  // Server酱
-  if(SERVERCHAN_KEY){
-    fetch('https://sctapi.ftqq.com/'+SERVERCHAN_KEY+'.send',{
-      method:'POST',
-      headers:{'Content-Type':'application/x-www-form-urlencoded'},
-      body:'title='+encodeURIComponent(title)+'&desp='+encodeURIComponent(content)
-    }).catch(function(){})
-  }
-  // Bark（iPhone）
-  if(BARK_KEY){
-    var barkUrl=BARK_KEY.indexOf('http')===0?BARK_KEY:'https://api.day.app/'+BARK_KEY
-    fetch(barkUrl+'/'+encodeURIComponent(title)+'/'+encodeURIComponent(content)).catch(function(){})
-  }
-  // 钉钉机器人
-  if(DINGTALK_WEBHOOK){
-    fetch(DINGTALK_WEBHOOK,{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({msgtype:'text',text:{content:title+'\n'+content}})
-    }).catch(function(){})
-  }
-}
-
 function notifyNewOrder(newOrders){
+  var fresh=newOrders.filter(function(o){return o.id>lastNotifiedOrderId})
+  if(!fresh.length)return
+  lastNotifiedOrderId=Math.max.apply(null,fresh.map(function(o){return o.id}))
   if(!notifOn)return
   playNotifSound()
-  sendBrowserNotif(newOrders.length)
+  sendBrowserNotif(fresh.length)
   try{if(navigator.vibrate)navigator.vibrate([200,100,200])}catch(e){}
   var alert=document.getElementById('newOrdAlert')
   if(alert){alert.classList.add('on');setTimeout(function(){alert.classList.remove('on')},8000)}
-  // 推送到手机
-  newOrders.forEach(function(o){
-    sendPush('新订单 #'+o.id,formatOrderText(o))
-  })
+  // 钉钉通知已由数据库触发器处理，客户端不再重复发送
 }
 
 // ===== Supabase =====
@@ -443,6 +394,7 @@ async function updateData(fn){
   }catch(e){console.error('updateData error:',e);sbar('error','⚠ 同步失败');return false}
 }
 
+// 备用轮询（仅在 Realtime 断开时兜底）
 async function poll(){
   try{
     var d=await fetchLatest()
@@ -672,8 +624,39 @@ function toast(m){var t=document.getElementById('ts');t.textContent=m;t.classLis
   log.push('✓ 步骤4: 共'+sd.menu.length+'道菜')
   showDebug(log.join('<br>')+'<br><br>🎉 正在渲染菜单...','ok')
   sbar('ok','✓ 数据已加载')
+
+  // 初始化通知去重ID（不重复通知已有订单）
+  if(sd.orders&&sd.orders.length){
+    lastNotifiedOrderId=Math.max.apply(null,sd.orders.map(function(o){return o.id}))
+  }
+
   setTimeout(function(){renderCats();renderMenu();updBadge()},500)
-  setInterval(poll,5000)
+
+  // ★★★ Supabase Realtime 实时订阅（替代5秒轮询）★★★
+  realtimeChannel=db.channel('realtime-orders')
+    .on('postgres_changes',{
+      event:'UPDATE',
+      schema:'public',
+      table:'app_data',
+      filter:'id=eq.main'
+    },function(payload){
+      try{
+        if(payload.new&&payload.new.content){
+          var d=payload.new.content
+          var oldCnt=sd.orders?sd.orders.length:0
+          var newOrders=d.orders&&d.orders.length>oldCnt?d.orders.slice(oldCnt):[]
+          sd=d
+          renderCurrentPage()
+          if(newOrders.length>0)notifyNewOrder(newOrders)
+        }
+      }catch(e){console.error('Realtime处理错误:',e)}
+    })
+    .subscribe(function(status){
+      console.log('Realtime连接状态:',status)
+    })
+
+  // 备用轮询（30秒一次，仅在 Realtime 断连时兜底）
+  setInterval(poll,30000)
 })()
 </script>
 </body>
