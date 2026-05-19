@@ -283,7 +283,6 @@ var audioCtx=null
 var notifOn=localStorage.getItem('notif_on')!=='false'
 var emoCatIdx=0
 var lastNotifiedOrderId=0
-var realtimeChannel=null
 
 var CG={1:'linear-gradient(135deg,#E8F5E9,#A5D6A7)',2:'linear-gradient(135deg,#FCE4EC,#F48FB1)',3:'linear-gradient(135deg,#FFF3E0,#FFCC80)',4:'linear-gradient(135deg,#E3F2FD,#90CAF9)',0:'linear-gradient(135deg,#FFF3E0,#FFE0B2)'}
 var PH=[{id:1,n:'日式抹茶',s:'清新淡雅',g:'linear-gradient(145deg,#C8E6C9,#81C784)',i:'🍵'},{id:2,n:'焦糖拿铁',s:'温暖慵懒',g:'linear-gradient(145deg,#D7CCC8,#A1887F)',i:'☕'},{id:3,n:'草莓甜心',s:'少女甜美',g:'linear-gradient(145deg,#FCE4EC,#F48FB1)',i:'🍓'},{id:4,n:'巧克力梦',s:'浓郁醇厚',g:'linear-gradient(145deg,#6D4C41,#D7CCC8)',i:'🍫'},{id:5,n:'蜜桃乌龙',s:'清新甜蜜',g:'linear-gradient(145deg,#FFE0B2,#FFB74D)',i:'🍑'},{id:6,n:'蓝莓星空',s:'梦幻浪漫',g:'linear-gradient(145deg,#E1BEE7,#BA68C8)',i:'🫐'},{id:7,n:'柠檬阳光',s:'活力清爽',g:'linear-gradient(145deg,#FFF9C4,#FFEE58)',i:'🍋'},{id:8,n:'樱花物语',s:'浪漫春日',g:'linear-gradient(145deg,#F8BBD0,#E1BEE7)',i:'🌸'}]
@@ -375,7 +374,6 @@ function notifyNewOrder(newOrders){
   try{if(navigator.vibrate)navigator.vibrate([200,100,200])}catch(e){}
   var alert=document.getElementById('newOrdAlert')
   if(alert){alert.classList.add('on');setTimeout(function(){alert.classList.remove('on')},8000)}
-  // 钉钉通知已由数据库触发器处理，客户端不再重复发送
 }
 
 // ===== Supabase =====
@@ -394,7 +392,6 @@ async function updateData(fn){
   }catch(e){console.error('updateData error:',e);sbar('error','⚠ 同步失败');return false}
 }
 
-// 备用轮询（仅在 Realtime 断开时兜底）
 async function poll(){
   try{
     var d=await fetchLatest()
@@ -404,7 +401,7 @@ async function poll(){
       sd=d;renderCurrentPage()
       if(newOrders.length>0)notifyNewOrder(newOrders)
     }
-  }catch(e){}
+  }catch(e){console.warn('轮询异常:',e)}
 }
 
 function renderCurrentPage(){
@@ -616,47 +613,93 @@ function toast(m){var t=document.getElementById('ts');t.textContent=m;t.classLis
 // ===== INIT =====
 ;(async function(){
   var log=[]
-  if(typeof window.supabase==='undefined'){showDebug('❌ Supabase JS库没有加载成功','error');return}
+  console.log('[布布] 初始化开始...')
+
+  // 1. 检查 Supabase 库
+  if(typeof window.supabase==='undefined'){
+    showDebug('❌ Supabase JS库没有加载成功，请检查网络','error')
+    console.error('[布布] Supabase JS 未加载')
+    return
+  }
   log.push('✓ 步骤1: Supabase库已加载')
-  try{db=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);log.push('✓ 步骤2: 客户端已创建')}catch(e){showDebug('❌ 步骤2失败: '+e.message,'error');return}
-  try{var r=await db.from('app_data').select('content').eq('id','main').single();if(r.error){showDebug('❌ 步骤3失败: '+r.error.message,'error');return}sd=r.data.content;log.push('✓ 步骤3: 数据库查询成功')}catch(e){showDebug('❌ 步骤3失败: '+e.message,'error');return}
-  if(!sd||!sd.menu||!sd.categories||!sd.orders){showDebug('❌ 步骤4: 数据结构不对','error');return}
-  log.push('✓ 步骤4: 共'+sd.menu.length+'道菜')
+
+  // 2. 创建客户端
+  try{
+    db=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY)
+    log.push('✓ 步骤2: 客户端已创建')
+    console.log('[布布] Supabase 客户端已创建')
+  }catch(e){
+    showDebug('❌ 步骤2失败: '+e.message,'error')
+    console.error('[布布] 客户端创建失败:',e)
+    return
+  }
+
+  // 3. 查询数据库
+  try{
+    var r=await db.from('app_data').select('content').eq('id','main').single()
+    if(r.error){
+      showDebug('❌ 步骤3失败: '+r.error.message+'<br><br>请确认 Supabase 中 app_data 表存在且有 id=main 的数据行','error')
+      console.error('[布布] 查询失败:',r.error)
+      return
+    }
+    sd=r.data.content
+    log.push('✓ 步骤3: 数据库查询成功')
+    console.log('[布布] 数据加载成功，菜单',sd.menu.length,'道，订单',sd.orders.length,'个')
+  }catch(e){
+    showDebug('❌ 步骤3失败: '+e.message,'error')
+    console.error('[布布] 查询异常:',e)
+    return
+  }
+
+  // 4. 验证数据结构
+  if(!sd||!sd.menu||!sd.categories||!sd.orders||!sd.nid){
+    showDebug('❌ 步骤4: 数据结构不完整<br>缺少: '+(!sd?'全部数据':'')+(sd&&!sd.menu?'menu ':'')+(sd&&!sd.categories?'categories ':'')+(sd&&!sd.orders?'orders ':'')+(sd&&!sd.nid?'nid ':''),'error')
+    return
+  }
+  log.push('✓ 步骤4: 共'+sd.menu.length+'道菜，'+sd.categories.length+'个分类')
+
   showDebug(log.join('<br>')+'<br><br>🎉 正在渲染菜单...','ok')
   sbar('ok','✓ 数据已加载')
 
-  // 初始化通知去重ID（不重复通知已有订单）
+  // 初始化通知去重ID
   if(sd.orders&&sd.orders.length){
     lastNotifiedOrderId=Math.max.apply(null,sd.orders.map(function(o){return o.id}))
   }
 
-  setTimeout(function(){renderCats();renderMenu();updBadge()},500)
+  setTimeout(function(){renderCats();renderMenu();updBadge()},300)
 
-  // ★★★ Supabase Realtime 实时订阅（替代5秒轮询）★★★
-  realtimeChannel=db.channel('realtime-orders')
-    .on('postgres_changes',{
-      event:'UPDATE',
-      schema:'public',
-      table:'app_data',
-      filter:'id=eq.main'
-    },function(payload){
-      try{
-        if(payload.new&&payload.new.content){
-          var d=payload.new.content
-          var oldCnt=sd.orders?sd.orders.length:0
-          var newOrders=d.orders&&d.orders.length>oldCnt?d.orders.slice(oldCnt):[]
-          sd=d
-          renderCurrentPage()
-          if(newOrders.length>0)notifyNewOrder(newOrders)
-        }
-      }catch(e){console.error('Realtime处理错误:',e)}
-    })
-    .subscribe(function(status){
-      console.log('Realtime连接状态:',status)
-    })
+  // ★★★ Supabase Realtime 实时订阅 ★★★
+  console.log('[布布] 尝试建立 Realtime 连接...')
+  try{
+    db.channel('orders-realtime')
+      .on('postgres_changes',{
+        event:'UPDATE',
+        schema:'public',
+        table:'app_data',
+        filter:'id=eq.main'
+      },function(payload){
+        console.log('[布布] Realtime 收到更新')
+        try{
+          if(payload.new&&payload.new.content){
+            var d=payload.new.content
+            var oldCnt=sd.orders?sd.orders.length:0
+            var newOrders=d.orders&&d.orders.length>oldCnt?d.orders.slice(oldCnt):[]
+            sd=d
+            renderCurrentPage()
+            if(newOrders.length>0)notifyNewOrder(newOrders)
+          }
+        }catch(e){console.error('[布布] Realtime处理错误:',e)}
+      })
+      .subscribe(function(status){
+        console.log('[布布] Realtime 状态:',status)
+      })
+  }catch(e){
+    console.warn('[布布] Realtime 订阅失败，仅使用轮询:',e)
+  }
 
-  // 备用轮询（30秒一次，仅在 Realtime 断连时兜底）
+  // 备用轮询（30秒一次）
   setInterval(poll,30000)
+  console.log('[布布] 初始化完成 ✓')
 })()
 </script>
 </body>
